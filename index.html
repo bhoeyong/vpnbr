@@ -1,0 +1,487 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>YouTube下载器 - 在线提取视频和音频</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(255,255,255,0.95);
+            border-radius: 32px;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.2);
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+            transition: all 0.3s ease;
+        }
+        .header {
+            background: #ff0000;
+            padding: 24px 30px;
+            color: white;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.9rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .header h1:before {
+            content: "▶️";
+            font-size: 1.8rem;
+        }
+        .header p {
+            margin: 8px 0 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        .content {
+            padding: 30px;
+        }
+        .input-group {
+            margin-bottom: 25px;
+        }
+        label {
+            font-weight: 600;
+            color: #1f2d3d;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .url-input {
+            width: 100%;
+            padding: 14px 18px;
+            font-size: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 28px;
+            transition: 0.2s;
+            outline: none;
+            background: #f8fafc;
+        }
+        .url-input:focus {
+            border-color: #ff0000;
+            box-shadow: 0 0 0 3px rgba(255,0,0,0.2);
+            background: white;
+        }
+        .fetch-btn {
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .fetch-btn:hover {
+            background: #cc0000;
+            transform: scale(0.98);
+        }
+        .fetch-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .loader {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid white;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .video-preview {
+            background: #f1f5f9;
+            border-radius: 24px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .preview-header {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .thumbnail {
+            width: 120px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #ddd;
+        }
+        .info {
+            flex: 1;
+        }
+        .info h3 {
+            margin: 0 0 6px;
+            font-size: 1.3rem;
+            color: #0f172a;
+        }
+        .info p {
+            margin: 4px 0;
+            color: #334155;
+            font-size: 0.85rem;
+        }
+        .download-options {
+            margin-top: 20px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 18px;
+        }
+        .option-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #475569;
+            transition: 0.2s;
+            border-radius: 30px;
+        }
+        .tab-btn.active {
+            background: #ff0000;
+            color: white;
+        }
+        .format-list {
+            max-height: 280px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .format-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 60px;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.1s;
+        }
+        .format-badge {
+            background: #eef2ff;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .download-btn-sm {
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.1s;
+        }
+        .download-btn-sm:hover {
+            background: #b91c1c;
+        }
+        .audio-download {
+            text-align: center;
+            background: #eef2ff;
+            padding: 20px;
+            border-radius: 24px;
+        }
+        .audio-btn {
+            background: #2d3748;
+            font-size: 1.1rem;
+            padding: 12px 28px;
+        }
+        .footer-note {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+        .error-msg {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-radius: 20px;
+            padding: 12px;
+            margin: 15px 0;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        @media (max-width: 600px) {
+            .content { padding: 20px; }
+            .preview-header { flex-direction: column; text-align: center; }
+            .thumbnail { width: 100px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>YouTube Downloader</h1>
+        <p>粘贴链接，提取视频或高品质音频 (MP3)</p>
+    </div>
+    <div class="content">
+        <div class="input-group">
+            <label>🔗 YouTube 视频链接</label>
+            <input type="text" id="url" class="url-input" placeholder="https://www.youtube.com/watch?v=..." value="">
+            <button id="fetchBtn" class="fetch-btn">📡 解析视频信息</button>
+        </div>
+
+        <div id="previewArea" class="video-preview"></div>
+        <div id="errorMsg" class="error-msg" style="display: none;"></div>
+        <div class="footer-note">
+            ⚡ 服务器端使用 yt-dlp + ffmpeg 处理 | 仅支持单个视频 | 下载后立即自动删除临时文件
+        </div>
+    </div>
+</div>
+
+<script>
+    const fetchBtn = document.getElementById('fetchBtn');
+    const urlInput = document.getElementById('url');
+    const previewArea = document.getElementById('previewArea');
+    const errorDiv = document.getElementById('errorMsg');
+
+    let currentVideoInfo = null;
+    let currentUrl = '';
+
+    function showError(msg) {
+        errorDiv.textContent = msg;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+
+    function clearPreview() {
+        previewArea.style.display = 'none';
+        previewArea.innerHTML = '';
+        currentVideoInfo = null;
+    }
+
+    function setLoading(loading) {
+        if (loading) {
+            fetchBtn.disabled = true;
+            fetchBtn.innerHTML = '<span class="loader"></span> 解析中...';
+        } else {
+            fetchBtn.disabled = false;
+            fetchBtn.innerHTML = '📡 解析视频信息';
+        }
+    }
+
+    async function fetchVideoInfo() {
+        const url = urlInput.value.trim();
+        if (!url) {
+            showError('请输入YouTube链接');
+            return;
+        }
+        if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+            showError('请提供有效的YouTube链接 (youtube.com 或 youtu.be)');
+            return;
+        }
+        clearPreview();
+        setLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append('url', url);
+            const response = await fetch('/info', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.error) {
+                showError(data.error);
+                setLoading(false);
+                return;
+            }
+            currentVideoInfo = data;
+            currentUrl = url;
+            renderPreview(data, url);
+        } catch (err) {
+            showError('网络错误: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function formatDuration(seconds) {
+        if (!seconds) return '未知';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        if (h > 0) return `${h}h ${m}m ${s}s`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes) return '未知大小';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function renderPreview(info, url) {
+        const title = info.title || '未知标题';
+        const thumb = info.thumbnail || '';
+        const duration = formatDuration(info.duration);
+        const formats = info.formats || [];
+
+        let formatsHtml = '';
+        if (formats.length > 0) {
+            formats.forEach(f => {
+                const height = f.height || '?';
+                const ext = f.ext || 'mp4';
+                const size = formatFileSize(f.filesize);
+                formatsHtml += `
+                    <div class="format-item">
+                        <span><strong>${height}p</strong> · ${ext.toUpperCase()} · ${size}</span>
+                        <button class="download-btn-sm" data-format-id="${f.format_id}" data-type="video">⬇️ 下载视频</button>
+                    </div>
+                `;
+            });
+        } else {
+            formatsHtml = '<div style="padding: 12px; text-align:center;">未获取到可选格式，将使用最佳质量下载</div>';
+        }
+
+        const html = `
+            <div class="preview-header">
+                <img class="thumbnail" src="${thumb}" alt="thumbnail" onerror="this.src='https://placehold.co/120x90?text=No+Image'">
+                <div class="info">
+                    <h3>${escapeHtml(title)}</h3>
+                    <p>⏱️ 时长: ${duration}</p>
+                    <p>🔗 ${escapeHtml(url)}</p>
+                </div>
+            </div>
+            <div class="download-options">
+                <div class="option-tabs">
+                    <button class="tab-btn active" data-tab="video">🎬 视频格式 (${formats.length}种)</button>
+                    <button class="tab-btn" data-tab="audio">🎵 音频 MP3</button>
+                </div>
+                <div id="tab-video" class="format-list">
+                    ${formatsHtml}
+                </div>
+                <div id="tab-audio" class="format-list" style="display:none;">
+                    <div class="audio-download">
+                        <p style="margin-bottom: 16px;">提取最佳音质并转换为 MP3 (192kbps)</p>
+                        <button id="downloadAudioBtn" class="download-btn-sm audio-btn" style="padding: 10px 28px;">🎧 下载 MP3 音频</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        previewArea.innerHTML = html;
+        previewArea.style.display = 'block';
+
+        // 绑定tab切换
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = btn.dataset.tab;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-video').style.display = tab === 'video' ? 'flex' : 'none';
+                document.getElementById('tab-audio').style.display = tab === 'audio' ? 'flex' : 'none';
+            });
+        });
+
+        // 绑定视频下载按钮
+        document.querySelectorAll('[data-format-id]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const formatId = btn.dataset.formatId;
+                startDownload(currentUrl, 'video', formatId);
+            });
+        });
+        // 音频下载按钮
+        const audioBtn = document.getElementById('downloadAudioBtn');
+        if (audioBtn) {
+            audioBtn.addEventListener('click', () => {
+                startDownload(currentUrl, 'audio', '');
+            });
+        }
+    }
+
+    function startDownload(url, type, formatId) {
+        // 创建一个隐藏表单提交，让浏览器直接下载（新窗口/同窗口）
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/download';
+        form.target = '_blank';  // 新标签页下载，避免页面跳转
+        const urlField = document.createElement('input');
+        urlField.type = 'hidden';
+        urlField.name = 'url';
+        urlField.value = url;
+        form.appendChild(urlField);
+        const typeField = document.createElement('input');
+        typeField.type = 'hidden';
+        typeField.name = 'type';
+        typeField.value = type;
+        form.appendChild(typeField);
+        if (formatId && type === 'video') {
+            const fmtField = document.createElement('input');
+            fmtField.type = 'hidden';
+            fmtField.name = 'format_id';
+            fmtField.value = formatId;
+            form.appendChild(fmtField);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        // 可选提示
+        const msg = type === 'audio' ? '正在提取音频，请稍等...' : '正在下载视频，请稍等...';
+        showError(msg);  // 临时提示下载开始
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    fetchBtn.addEventListener('click', fetchVideoInfo);
+    urlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') fetchVideoInfo();
+    });
+</script>
+</body>
+</html>
